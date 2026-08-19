@@ -12,7 +12,8 @@ written to /tmp/debug_full.png, /tmp/debug_crop_gray.png, and
 Topics published:
     /cable_length_display  (sensor_msgs/Image)        - cropped, thresholded digit image
     /cable_length_full     (sensor_msgs/Image)        - full frame with crop region overlaid
-    /cable_length          (std_msgs/Float32)         - extracted numeric reading (2 Hz)
+    /cable_length          (std_msgs/Float32)         - extracted numeric reading (2 Hz),
+                                                    NaN when the display is off/unreadable
     /diagnostics           (diagnostic_msgs/DiagnosticArray) - battery level (0.1 Hz)
 
 Run directly with: python3 runporead.py
@@ -184,20 +185,24 @@ class RunporeadNode(Node):
 
         value = self.run_ssocr(thresh)
         if value is None:
+            # Publish NaN so downstream keeps receiving messages at RATE_HZ
+            # and can distinguish "unreadable" from "node dead / topic silent".
+            value = float('nan')
             # Only log once on transition to avoid spamming at 2 Hz
             if self._display_on:
                 self._display_on = False
                 self.get_logger().warn(
                     'Display off or unreadable — ssocr extraction failed. '
-                    'Will resume silently when display comes back on.'
+                    'Publishing NaN on /cable_length until the display comes back on.'
                 )
         else:
             if not self._display_on:
                 self._display_on = True
                 self.get_logger().info('Display back on — resuming cable length readings.')
-            msg = Float32()
-            msg.data = value
-            self.value_pub.publish(msg)
+
+        msg = Float32()
+        msg.data = value
+        self.value_pub.publish(msg)
 
     # ------------------------------------------------------------------
     # Battery: sample three pixels, publish a single battery_level float
