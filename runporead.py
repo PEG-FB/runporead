@@ -47,12 +47,13 @@ BATTERY_HZ     = 0.1    # battery diagnostics rate (every 10 s)
 
 # Crop region (x1, y1, x2, y2) in pixels, against the 640x480 capture,
 # applied AFTER the 180-degree rotation below.
-CROP_REGION = (215, 215, 450, 290)
+# Updated for the new ~60° FOV lens (was ~120° previously).
+CROP_REGION = (95, 185, 530, 335)
 
 # Threshold for digit binarization (0-255).
 # Below this → dark (segment filled), above → white (background).
-# 110 gives clean separation on the locked-exposure image.
-THRESHOLD = 110
+# 120 gives a wide, clean margin in the new lens's brightness histogram.
+THRESHOLD = 120
 
 # Pixels of white border added around the thresholded crop before ssocr.
 # Prevents digits touching the image edge, which confuses ssocr segmentation.
@@ -66,12 +67,12 @@ MORPH_KERNEL_SIZE = 3
 # Battery icon sample points (x, y) in the full 640x480 frame, AFTER rotation.
 # One point per segment, placed in the centre of each filled rectangle.
 # Same THRESHOLD used: gray < THRESHOLD → segment filled, else empty.
-# Determined from debug_full.png inspection.
+# Updated for the new ~60° FOV lens — determined from fresh.jpg inspection.
 # ---------------------------------------------------------------------------
 BATTERY_SAMPLE_POINTS = [
-    (393, 196),   # left segment
-    (405, 196),   # middle segment
-    (417, 196),   # right segment
+    (428, 152),   # left segment
+    (452, 152),   # middle segment
+    (478, 152),   # right segment
 ]
 
 # ---------------------------------------------------------------------------
