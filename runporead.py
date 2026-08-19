@@ -14,7 +14,9 @@ Topics published:
     /cable_length_full     (sensor_msgs/Image)        - full frame with crop region overlaid
     /cable_length          (std_msgs/Float32)         - extracted numeric reading (2 Hz),
                                                     NaN when the display is off/unreadable
-    /diagnostics           (diagnostic_msgs/DiagnosticArray) - battery level (0.1 Hz)
+    /diagnostics           (diagnostic_msgs/DiagnosticArray) - battery level, display
+                                                    on/off, and this Pi's CPU temperature
+                                                    (WARN >= 70°C, ERROR >= 80°C) (0.1 Hz)
 
 Run directly with: python3 runporead.py
 Requires: rclpy, cv_bridge, opencv-python, picamera2, ssocr (on PATH)
@@ -88,6 +90,11 @@ COLOUR_GAINS     = (1.5, 1.5)  # (red, blue) — only used when AWB_ENABLED=Fals
 
 # ssocr binary — on PATH after `sudo make install`
 SSOCR_BIN = "ssocr"
+
+# CPU temperature thresholds (reported in /diagnostics alongside battery)
+CPU_TEMP_WARN_C  = 70.0
+CPU_TEMP_ERROR_C = 80.0
+CPU_TEMP_PATH    = '/sys/class/thermal/thermal_zone0/temp'
 
 
 class RunporeadNode(Node):
@@ -241,7 +248,7 @@ class RunporeadNode(Node):
 
         arr = DiagnosticArray()
         arr.header.stamp = self.get_clock().now().to_msg()
-        arr.status = [status, self._display_status()]
+        arr.status = [status, self._display_status(), self._cpu_temp_status()]
         self.diag_pub.publish(arr)
 
     def _display_status(self):
@@ -257,6 +264,40 @@ class RunporeadNode(Node):
             s.level   = DiagnosticStatus.WARN
             s.message = 'Display OFF — no cable length readings'
         return s
+
+    def _cpu_temp_status(self):
+        """DiagnosticStatus for this Pi's own CPU temperature.
+        WARN at CPU_TEMP_WARN_C, ERROR at CPU_TEMP_ERROR_C."""
+        s = DiagnosticStatus()
+        s.name        = 'runporead/cpu_temp'
+        s.hardware_id = 'runporead_pi'
+
+        temp_c = self._read_cpu_temp_c()
+        if temp_c is None:
+            s.level   = DiagnosticStatus.ERROR
+            s.message = f'CPU temperature unreadable ({CPU_TEMP_PATH})'
+            s.values  = []
+            return s
+
+        s.values = [KeyValue(key='cpu_temp_c', value=f'{temp_c:.1f}')]
+        if temp_c >= CPU_TEMP_ERROR_C:
+            s.level   = DiagnosticStatus.ERROR
+            s.message = f'CPU temperature ERROR — {temp_c:.1f}°C (>= {CPU_TEMP_ERROR_C:.0f}°C)'
+        elif temp_c >= CPU_TEMP_WARN_C:
+            s.level   = DiagnosticStatus.WARN
+            s.message = f'CPU temperature WARNING — {temp_c:.1f}°C (>= {CPU_TEMP_WARN_C:.0f}°C)'
+        else:
+            s.level   = DiagnosticStatus.OK
+            s.message = f'CPU temperature OK — {temp_c:.1f}°C'
+        return s
+
+    @staticmethod
+    def _read_cpu_temp_c():
+        try:
+            with open(CPU_TEMP_PATH) as f:
+                return int(f.read().strip()) / 1000.0
+        except (OSError, ValueError):
+            return None
 
     # ------------------------------------------------------------------
     # ssocr helper
