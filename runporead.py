@@ -56,7 +56,7 @@ CROP_REGION = (95, 185, 530, 335)
 # Threshold for digit binarization (0-255).
 # Below this → dark (segment filled), above → white (background).
 # 120 gives a wide, clean margin in the new lens's brightness histogram.
-THRESHOLD = 120
+THRESHOLD = 90
 
 # Pixels of white border added around the thresholded crop before ssocr.
 # Prevents digits touching the image edge, which confuses ssocr segmentation.
@@ -83,7 +83,7 @@ BATTERY_SAMPLE_POINTS = [
 # Lock these so THRESHOLD stays valid across reboots and sessions.
 # ---------------------------------------------------------------------------
 MANUAL_EXPOSURE_ENABLED = True
-EXPOSURE_TIME_US = 16000    # µs — increase if too dark, decrease if blown out
+EXPOSURE_TIME_US = 13000    # µs — increase if too dark, decrease if blown out
 ANALOGUE_GAIN    = 1.0      # sensor gain (~ISO). Try 1.0–4.0.
 AWB_ENABLED      = False    # lock white balance for consistent grayscale
 COLOUR_GAINS     = (1.5, 1.5)  # (red, blue) — only used when AWB_ENABLED=False
